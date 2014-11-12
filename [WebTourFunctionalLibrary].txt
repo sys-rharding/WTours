@@ -1,0 +1,113 @@
+'**********************************************************************************************
+Function CloseBrowser 'close all open browsers except Quality center
+Dim oDesc, x
+'Create a description object
+Set oDesc = Description.Create
+oDesc( "micclass" ).Value = "Browser"
+ 'Close all browsers except Quality Center
+If Desktop.ChildObjects(oDesc).Count > 0 Then
+    For x = Desktop.ChildObjects(oDesc).Count - 1 To 0 Step -1
+       If InStr(1, Browser("creationtime:="&x).GetROProperty("name"), "Quality Center") = 0 Then  
+          Browser( "creationtime:=" & x ).Close
+       End If
+    Next
+End If
+End Function
+'**********************************************************************************************
+
+'**********************************************************************************************
+Function CreateFolderDatatable (fso)
+	Set f = fso.CreateFolder("C:\DemoFolder\")
+	If not fso.FolderExists("C:\DemoFolder\HTMLDocs\")  Then
+		Set f2 = fso.CreateFolder("C:\DemoFolder\HTMLDocs\")
+	End If
+		CreateFolderDatatable  = f.Path
+		set f = nothing
+		set f2 = nothing
+		Set  fso = nothing
+End Function
+'**********************************************************************************************
+'**********************************************************************************************
+Function ObjectDictionary(Byref myRep, webObjects, Repository_Path)
+counter = 0
+RepositoriesCollection.RemoveAll
+myRep.Load Repository_Path
+Set browserCollection = myRep.GetAllObjectsByClass("Browser")
+For i = 0 to browserCollection.count -1
+		Set browserTestObject = browserCollection.Item(i) 
+		oBrowserName = myRep.GetLogicalName(browserTestObject)
+		webObjects.Add  oBrowserName, ""
+		Set PageColl  = myRep.GetChildren(browserTestObject)
+For j = 0 to  PageColl.count-1
+		Set pageobject = PageColl.Item(j)
+	         oPLogicalName = myRep.GetLogicalName(pageobject)
+	         webObjects.Add oPLogicalName& oBrowserName, ""
+	   Set ObjColl = myRep.GetChildren(pageobject)
+       	  For k = 0 to ObjColl.count-1
+			     counter = counter + 1
+	   Set testobject = ObjColl.item(k)
+		     oLogicalName = myRep.GetLogicalName(testobject)
+             On error resume next
+ 		      webObjects.Add oBrowserName& oPLogicalName& oLogicalName, testobject.GetTOProperty("micClass")
+            Next 
+	   Next
+	Next
+On Error GoTo 0
+End Function
+'********************************************************************************************************************************************
+'*********************************************************************************************************
+Function verifyText(ObjectLogicalName, text_found, dataValue)
+  If  (text_found = dataValue) Then
+	     reporter.ReportEvent micPass, ObjectLogicalName, dataValue&"  "&"Found"   
+   Else
+	    reporter.ReportEvent micFail, ObjectLogicalName, dataValue&"  "&"not Found"&"   "&"-Found value is    "&text_found
+ End if
+End Function
+'********************************************************************************************************************
+'********************************************************************************************************************
+Function oCheckPoint(ScrDrv, CheckPointObject)
+		ScDrv.Check CheckPoint(CheckPointObject)
+End Function
+'********************************************************************************************************************
+'***********************************************************************************************************
+Public Function ClickLink(ScrDrv)
+   ScrDrv.Click
+End Function
+'**********************************************************************************************
+'**********************************************************************************************
+Public Function SelectButton(ButtonObject)
+	ButtonObject.click
+End Function
+'***********************************************************************************************
+'**********************************************************************************************
+Public Function InputField(FieldObject, datavalue)
+	FieldObject.set (datavalue)
+End Function
+'**********************************************************************************************
+'**********************************************************************************************
+Public function SelectRadioButton(WebRadioGroup, dataValue)
+	WebRadioGroup.select dataValue
+End Function
+'***********************************************************************************************
+'**********************************************************************************************
+Public Function SelectFromList (WebListObj, datavalue)
+	WebListObj.select datavalue
+End Function
+'**************************************************************************************************
+'**************************************************************************************************
+Public Function SelectCheckBox(WebCheckBox,datavalue)
+   WebCheckBox.Set datavalue
+ 'End If
+End Function
+'*****************************************************************************************************
+
+'*****************************************************************************************************
+Public Function Nav_Back(ScrDrv)
+	ScrDrv.Back
+End Function
+'*****************************************************************************************************
+
+Public Function Nav_Forward(ScrDrv)
+	ScrDrv.Forward
+End Function
+'*****************************************************************************************************

@@ -1,0 +1,70 @@
+Public Function GetAttachmentPath(TDAttachmentName)
+
+	'	Test Director TDAPIOLELib object variables
+	Dim otaAttachmentFactory                  'As TDAPIOLELib.AttachmentFactory
+	Dim otaAttachment                         'As TDAPIOLELib.Attachment
+	Dim otaAttachmentList                     'As TDAPIOLELib.List
+	Dim otaAttachmentFilter                   'As TDAPIOLELib.TDFilter
+	Dim otaExtendedStorage                    'As TDAPIOLELib.ExtendedStorage
+	
+	Dim strPath                               'As String
+	
+	Set otaAttachmentFactory = QCUtil.CurrentTest.Attachments
+	Set otaAttachmentFilter = otaAttachmentFactory.Filter
+	otaAttachmentFilter.Filter("CR_REFERENCE") = "'TEST_" & QCUtil.CurrentTest.Id & "_" & TDAttachmentName & "'"
+	Set otaAttachmentList = otaAttachmentFilter.NewList
+	If otaAttachmentList.Count = 1 Then
+		Set otaAttachment = otaAttachmentList.Item(1)
+		otaAttachment.Load True, ""
+		strPath = otaAttachment.FileName
+		ElseIf otaAttachmentList.Count > 1 Then
+			Reporter.ReportEvent micFail, "Failure in library function 'GetTestAttachmentPath'", _
+			"Found more than one attachment '" & TDAttachmentName & "' in test '" & _
+			QCUtil.CurrentTest.Name & "'."
+			ElseIf otaAttachmentList.Count < 1 Then
+				Reporter.ReportEvent micFail, "Failure in library function 'GetTestAttachmentPath'", _
+				"Found 0 attachments '" & TDAttachmentName & "' in test '" & _
+				QCUtil.CurrentTest.Name & "'."
+	End If
+	
+	GetAttachmentPath = strPath          'Return File Path
+	
+	Set otaAttachmentFactory = Nothing
+	Set otaAttachment        = Nothing
+	Set otaAttachmentList    = Nothing
+	Set otaAttachmentFilter  = Nothing
+  
+End Function
+
+Function QCGetResource(in_resource, dest_folder, dest_file)
+
+	Dim oQTP, oQC, oRes, oFilter, oFile, sDestination, sName, oFileList
+
+	Set oQTP = CreateObject("QuickTest.Application")
+	Set oQC = QCUtil.QCConnection
+	Set oRes = oQC.QCResourceFactory
+	Set oFilter =  oRes.Filter
+
+	sDestination = dest_folder
+	sName = dest_file
+
+	oFilter.Filter("RSC_FILE_NAME") = sName
+                  
+	Set oFileList = oFilter.NewList
+                   
+	If oFileList.Count = 1 Then
+		Set oFile = oFileList.Item(1)
+		oFile.FileName = in_resource
+		oFile.DownloadResource sDestination, True
+	End If
+                                      
+	Set oQTP = Nothing
+	Set oQC = Nothing
+	Set oRes = Nothing
+	Set oFilter = Nothing
+	Set oFileList = Nothing
+	Set oFile = Nothing
+
+	QCGetResource = dest_folder & "\" & dest_file
+
+End Function

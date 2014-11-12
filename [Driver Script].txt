@@ -1,0 +1,379 @@
+CloseBrowser
+
+Test_Name= Environment.Value("currentTest")
+'msgbox Test_Name
+
+' >>>>>>>>>>>> DIFFING TOOL >>>>>>>>>>>>>>>>
+Dim ENABLE_SOURCE_CAPTURE
+
+'******************************************************
+ENABLE_SOURCE_CAPTURE = True ' Enables all source capture, diffing, and test set creation; FALSE = disabled
+'******************************************************
+
+Function cleanPageName(pn)
+	Dim regEx, res
+	Set regEx = New RegExp
+	regEx.Pattern = "[^\w]"
+	regEx.IgnoreCase = True
+	regEx.Global = true 
+	res = regEx.Replace(pn, "")
+	cleanPageName = res
+End Function
+
+Dim pNDict
+Set pNDict = CreateObject("Scripting.Dictionary")
+' >>>>>>>>>>> DIFFING TOOL >>>>>>>>>>>>>>>>
+
+Set myRep = CreateObject("Mercury.ObjectRepositoryUtil")
+Set webObjects = CreateObject("Scripting.Dictionary")
+ORSource = QCGetResource("flight2.tsr", "C:\Temp", "flight2.tsr")
+ 'close all opened browsers
+ObjectDictionary myRep, webObjects, ORSource
+Set IE = CreateObject("InternetExplorer.Application")
+ie.Navigate "http://w2k8s-lab-1:8080/mtours/servlet/WelcomeServlet" '"http://newtours.demoaut.com/"
+ie.Visible=True
+wait 1
+Window("hwnd:=" & IE.HWND).Maximize
+
+'SystemUtil.Run "iexplore", "http://newtours.demoaut.com/",,,3
+''SystemUtil.Run "iexplore", "http://newtours.demoaut.com/"
+''		hWnd = Browser("title:=.*").GetROProperty("hwnd")
+''		Window("hwnd:=" & hWnd).Maximize
+
+DTPath=GetAttachmentPath("datatable.xls")
+datatable.importsheet DTPath, "Sheet1", "Global"
+DataTable.GetSheet(1).AddParameter "Found",""
+
+' >>>>>>>>>>>> DIFFING TOOL >>>>>>>>>>>>>>>>
+Dim fs, fsbuf, HTMLcode, pName, timestamp, testname, rootfolder, testfolder
+Set fs = CreateObject("Scripting.FileSystemObject")
+
+Dim sDay, sMonth, sYear, sHour, sMin, sSec, sNow, sTime
+
+sNow = now
+sTime=Timevalue(sNow)
+sDay = right("0" & day(Date()),2)
+sMonth = right("0" & month(Date()),2)
+sYear = Cstr(year(Date()))
+sHour = right("0" & Hour(cStr(sTime)),2)
+sMin = right("0" & Minute(cStr(sTime)),2)
+sSec = right("0" & Second(cStr(sTime)),2)
+
+timestamp = sYear & "-" & sMonth & "-" & sDay & "_" & sHour & "-" &  sMin & "-" &  sSec
+testname = Test_Name
+rootfolder = "C:\almtest\" & testname
+testfolder = rootfolder & "\" & timestamp
+
+If ENABLE_SOURCE_CAPTURE Then
+	If Not fs.FolderExists(rootfolder) Then
+		fs.CreateFolder(rootfolder)
+	End If
+	
+	fs.CreateFolder(testfolder)
+End If
+' >>>>>>>>>>>> DIFFING TOOL >>>>>>>>>>>>>>>>
+
+Dim myDTSheet, screenObjectName, fieldName, actionName, dataValue, ObjectRepositoryPath, XLDataSheet 
+Dim ScrDrv, url, xpath, i
+Set myDTSheet =nothing
+
+RepositoriesCollection.RemoveAll
+RepositoriesCollection.Add(ORSource)
+Set myDTSheet = DataTable.GetSheet("Global")
+Browser("Welcome: Mercury Tours").Page("Welcome: Mercury Tours").Sync
+''****************************************************************************************************************
+print myDTSheet.GetRowCount
+
+For i = 1 to myDTSheet.GetRowCount
+	myDTSheet.SetCurrentRow(i)
+	browserName=myDTSheet.GetParameter("Browser")
+	pageName = myDTSheet.GetParameter ("Page")
+	objectName = myDTSheet.GetParameter ("Object")
+	actionName = ucase(myDTSheet.GetParameter ("Action"))
+	dataValue = myDTSheet.GetParameter ("Data")
+	'step_Name=myDTSheet.GetParameter("Step_Name")
+   ' className = myDTSheet.GetParameter("oClassName")
+'********************************************************************************************************************
+If ucase( dataValue)= "END" Then
+	'datatable.Export("C:\DemoFolder\Datatable"&" "&Test_Name&".xls")
+	'ExitTest
+	Exit For
+End If
+
+' >>>>>>>>>>>> DIFFING TOOL >>>>>>>>>>>>>>>>
+If ENABLE_SOURCE_CAPTURE Then
+
+	pageNameClean = cleanPageName(pageName)
+
+	If Not pNDict.Exists(pageNameClean) Then
+		pNDict.Add pageNameClean, pageName
+	End If
+
+	''''''''''''''''''''''''''''''''''''''''''''''
+	'' Save the HTML source for diff
+	'''''''''''''''''''''''''''''''''''''''''''''
+	Set pName = Browser("title:=.*").Page("title:=.*")
+	Htmlcode=pname.Object.documentElement.outerHtml
+	Set fsbuf = fs.OpenTextFile(testfolder & "\" & pageNameClean & ".html", 2, True)
+	fsbuf.Write(Htmlcode)
+	fsbuf.Write(vbcrlf)
+	fsbuf.Close()
+	
+	''''''''''''''''''''''''''''''''''''''''''''''
+	'' Save the object data into a word doc
+	'''''''''''''''''''''''''''''''''''''''''''''
+	Set fsbuf = fs.OpenTextFile(testfolder & "\" & pageNameClean & "_OBJECTS.txt", 2, True)
+
+	' Images
+	Set oPage = Browser("title:=.*").Page("title:=.*").object
+	Set DomObjects = oPage.getElementsByTagName("img")
+	fsbuf.Write(">>>>>>>>>>>>>>>>IMAGES>>>>>>>>>>>>>>>>")
+	fsbuf.Write(vbcrlf)
+	For each wobj in DomObjects
+		fsbuf.Write(wobj.outerHtml)
+		fsbuf.Write(vbcrlf)
+	Next
+	fsbuf.Write("<<<<<<<<<<<<<<<<IMAGES<<<<<<<<<<<<<<<<")
+	fsbuf.Write(vbcrlf)
+
+	' Web Buttons
+	Set oPage = Browser("title:=.*").Page("title:=.*").object
+	Set DomObjects = oPage.getElementsByTagName("button")
+	fsbuf.Write(">>>>>>>>>>>>>>>>BUTTONS>>>>>>>>>>>>>>>>")
+	fsbuf.Write(vbcrlf)
+	For each wobj in DomObjects
+		fsbuf.Write(wobj.outerHtml)
+		fsbuf.Write(vbcrlf)
+	Next
+	fsbuf.Write("<<<<<<<<<<<<<<<<BUTTONS<<<<<<<<<<<<<<<<")
+	fsbuf.Write(vbcrlf)
+
+	' Web Inputs
+	Set oPage = Browser("title:=.*").Page("title:=.*").object
+	Set DomObjects = oPage.getElementsByTagName("input")
+	fsbuf.Write(">>>>>>>>>>>>>>>>INPUTS>>>>>>>>>>>>>>>>")
+	fsbuf.Write(vbcrlf)
+	For each wobj in DomObjects
+		fsbuf.Write(wobj.outerHtml)
+		fsbuf.Write(vbcrlf)
+	Next
+	fsbuf.Write("<<<<<<<<<<<<<<<<INPUTS<<<<<<<<<<<<<<<<")
+	fsbuf.Write(vbcrlf)
+
+	' Links
+	Set oPage = Browser("title:=.*").Page("title:=.*").object
+	Set DomObjects = oPage.getElementsByTagName("a")
+	fsbuf.Write(">>>>>>>>>>>>>>>>LINKS>>>>>>>>>>>>>>>>")
+	fsbuf.Write(vbcrlf)
+	For each wobj in DomObjects
+		fsbuf.Write(wobj.outerHtml)
+		fsbuf.Write(vbcrlf)
+	Next
+	fsbuf.Write("<<<<<<<<<<<<<<<<LINKS<<<<<<<<<<<<<<<<")
+	fsbuf.Write(vbcrlf)
+	fsbuf.Close()
+End If
+' >>>>>>>>>>>> DIFFING TOOL >>>>>>>>>>>>>>>>
+
+Set ScrDrv = Browser(browserName).Page(pageName)
+myobjects =   browserName&pageName&objectName
+
+If  webObjects.Exists(myobjects) Then
+	oObjectP = webObjects.Item(myobjects)
+	print oObjectP
+		If oObjectP = "WebTable"  Then
+				actionName = "TABLE"
+		Else
+				actionName = oObjectP
+		End If
+
+End If
+
+'ScrDrv.Sync
+'wait 1
+Select Case actionName
+	'WebButton
+	Case  "Image" 'or   "WebButton"    'SUBMIT"
+					Set ScrDrv = Browser(browserName).Page(pageName)
+                        SelectButton ScrDrv.Image(objectName)
+						'ScrDrv.Sync
+                	'WebEdit
+	Case 	"WebEdit"  '"WebRadioGroup"	'"INPUT"
+					'Set ScrDrv = Browser(browserName).Page(pageName)
+					InputField ScrDrv.WebEdit(objectName), dataValue
+	'RadioButtons
+	Case "WebRadioGroup" 	'SELECT"
+					Set ScrDrv = Browser(browserName).Page(pageName)
+                   SelectRadioButton ScrDrv.WebRadioGroup(objectName), dataValue
+				     'SelectRadioButton browserName,pageName,objectName,dataValue            				
+	'WebList	
+	Case "WebList"
+					Set ScrDrv = Browser(browserName).Page(pageName)
+					Do until  ScrDrv.Exist
+						loop
+			 'ScrDrv.WaitProperty "attribute/readyState", "complete", 4000
+      '   	 Loop
+					 'ScrDrv.Sync
+					'msgbox dataValue
+					SelectFromList ScrDrv.WebList(objectName), dataValue
+	'Click_Link
+	Case  "Link"
+				Set ScrDrv = Browser(browserName).Page(pageName)
+                				'ClickLink ScrDrv.Link(objectName)
+								ClickLink ScrDrv.LINK(objectName)
+	'Verify												
+	Case "WebElement"   '	"VERIFY"
+					Set ScrDrv = Browser(browserName).Page(pageName)
+            							text_found =  ScrDrv.WebElement(objectName).GetROProperty("innertext")
+					'End if
+						If (text_found <>  dataValue) Then
+                           datatable.Value("Found",  "Global") = text_found
+						End If
+							verifyText objectName, text_found, dataValue
+                   	'ValidateText objectName, step_Name, dataValue, text_found
+	'checkBox'
+	Case "WebCheckBox" 	' "CHECKBOX"
+				'Set ScrDrv = Browser(browserName).Page(pageName).WebCheckBox(objectName)
+				Set ScrDrv = Browser(browserName).Page(pageName)
+                SelectCheckBox  ScrDrv.WebCheckBox(objectName), dataValue	
+        
+	Case "TABLE"
+			'tblParam = split(dataValue,",")
+			  Set ScrDrv = Browser(browserName).Page(pageName)
+			  Set table_object = ScrDrv.WebTable(objectName)
+			If  ucase(myDTSheet.GetParameter ("Action")) = "GETTABLE"  Then
+					getTableContent DTPath, Table_Object
+			Else
+					tblSheet = dataValue
+					tblNum = right(dataValue, 1)
+					checkTable DTPath, Table_Object, tblSheet, tblNum
+    	    End If
+
+	Case "GETTABLE"
+			     Set ScrDrv = Browser(browserName).Page(pageName)
+		        Set table_object = ScrDrv.WebTable(objectName)
+				'Sheet = dataValue
+				getTableContent DTPath, Table_Object
+
+	Case "CLOSEBROWSER"
+	   Set ScrDrv = Browser(browserName)
+	   ScrDrv.CloseAllTabs
+End Select
+Next
+
+
+' >>>>>>>>>>>> DIFFING TOOL >>>>>>>>>>>>>>>>
+If ENABLE_SOURCE_CAPTURE Then
+	''''''''''''''''''''''''''''''''''''''''''''
+	'''  Diffing out files 
+	''''''''''''''''''''''''''''''''''''''''''''
+	
+	Dim oFile, latest, lastFolder , lastFFile, lastts, aFile, bFile, WshShell, diffFile, diffFileQuotes, diffFolder, oExec, cmd
+	Dim excel_CF, excelwkbk_CF, excelsheets_CF, diffFso, diffTmp, rowOffset, hasDiffs, currentPageKey, Return, fil
+	hasDiffs = False
+	Set WshShell = CreateObject("WScript.Shell")
+
+	' Create our excel doc from template control file
+	fs.CopyFile "C:\Temp\controlfile.xlsx", "C:\Temp\controlfile_" & timestamp & ".xlsx"
+
+	Set excel_CF = createobject("Excel.Application")
+	Set excelwkbk_CF = excel_CF.Workbooks.Open("C:\Temp\controlfile_" & timestamp & ".xlsx") ' @todo filename
+	Set excelsheets_CF =excelwkbk_CF.Worksheets
+	excelsheets_CF(1).Unprotect
+
+	If fs.FileExists(rootfolder & "\latest") Then
+
+		Set latest = fs.OpenTextFile(rootfolder & "\latest")
+		lastts = trim(latest.ReadAll())
+		latest.close()
+	
+		rowOffset = 1
+		' Step through the result files and iff them out with git
+		Set lastFolder = fs.GetFolder(rootfolder & "\" & lastts)
+		
+		
+		For Each lastFFile in lastFolder.Files
+			aFile = """" & rootfolder & "\" & lastts & "\" & lastFFile.Name & """"
+			bFile = """" & rootfolder & "\" & timestamp & "\" & lastFFile.Name & """"
+	
+			diffFile =  rootfolder & "\" & lastFFile.Name & ".diff"
+			diffFileQuotes = """" & diffFile & """"
+			cmd = "%comspec% /c git --no-pager diff " & aFile & " " & bFile & " > " & diffFileQuotes
+			Return = WshShell.Run(cmd, 1, True)
+
+			' this is awful
+			While  Not fs.FileExists(diffFile)
+				wait 1
+			Wend
+			
+			Set fil = fs.GetFile(diffFile)
+			If fil.Size >= 1 And InStr(lastFFile.Name, ".html") Then
+				hasDiffs = True
+				rowOffset = rowOffset + 1
+
+				currentPageKey = Replace(lastFFile.Name, ".html", "")
+				excelsheets_CF(1).Range("B" & rowOffset).Value = pNDict.Item(currentPageKey)
+			End If
+			Set fil = nothing
+	
+		Next
+		
+	End If
+	
+	' Save our workbook
+	excelwkbk_CF.Save
+	excelwkbk_CF.Close True
+	excel_CF.Quit
+	
+	Set latest = fs.OpenTextFile(rootfolder & "\latest", 2, True)
+	latest.Write(timestamp)
+	latest.Close()
+	Set latest = nothing
+	
+	If hasDiffs  Then
+		' Run the websearch tool to populate the excel sheet
+		RunAction "Action1 [WebSearchTool]", oneIteration, timestamp
+		
+		' Search through the populated excel sheet for unique values
+		Dim testList, kval
+		Set testList = createobject("Scripting.Dictionary")
+		Set excel_CF = createobject("Excel.Application")
+		Set excelwkbk_CF = excel_CF.Workbooks.Open("C:\Temp\controlfile_" & timestamp & ".xlsx") ' @todo filename
+		Set excelsheets_CF =excelwkbk_CF.Worksheets
+		rowOffset = 1
+		
+		Do 
+			rowOffset = rowOffset + 1
+			kval = excelsheets_CF(2).Range("A" & rowOffset).Value
+		
+			If Len(kval) And Not testList.Exists(kval) Then
+				testList.Add kval, kval	
+			End If
+		Loop While Len(kval)
+		
+		excelwkbk_CF.Close False
+		excel_CF.Quit
+		
+		
+		Dim testNames
+		testNames = Join(testList.Items, ",")
+		
+		If Len(testNames) Then
+			RunAction "Action1 [BeyondCompare2QualityCenter]", oneIteration, testNames
+		End If
+
+	End If
+
+End If
+
+
+
+Set fso = CreateObject("Scripting.FileSystemObject")
+If Not fso.FolderExists("C:\DemoFolder\") then
+		CreateFolderDatatable fso
+end if
+
+datatable.Export("C:\DemoFolder\Datatable"&" "&Test_Name&".xls")
+'Datatable.ExportSheet "C:\DataTables\datatable_11.xls", 1
+
+ExitTest

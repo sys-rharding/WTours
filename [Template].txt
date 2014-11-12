@@ -1,0 +1,29 @@
+'Option Explicit
+Dim rc, CurrentTSTest, CurrentTest, CurrentRun, TestSet_Name, Test_Name, Test_Instance, DTpath
+
+On Error Resume Next
+Set CurrentTSTest = QCUtil.CurrentTestSet 
+Set CurrentTest = QCUtil.CurrentTest
+Set CurrentRun = QCUtil.CurrentRun
+
+TestSet_Name = CurrentTSTest.Name
+Test_Name = CurrentTest.Name
+Test_Instance = CurrentRun.TestInstance
+Environment.Value("currentTest")=Test_Name
+
+On Error GoTo 0
+
+'DTpath=GetTestAttachmentPath("datatable.xls")
+
+'RunAction "Main [KDSE Driver]", oneIteration, "UI", TestSet_Name, Test_Name, Test_Instance, DTpath
+
+rc = RunAction("Action1 [Driver Script]", oneIteration)
+
+'rc = RunAction ("Action1 [Driver Script]", oneIteration)
+
+'rc = RunAction ("Action1 [Driver Script]", oneIteration, TestSet_Name, Test_Name, Test_Instance, DTpath)
+'rc =RunAction ("Main [KDSE Driver]", oneIteration , "UI", TestSet_Name, Test_Name, Test_Instance, DTpath)
+
+If rc <> 0 Then
+	reporter.ReportEvent micFail, "Run Status", "Automated test failed."
+End If

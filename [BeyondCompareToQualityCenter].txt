@@ -1,0 +1,265 @@
+Sub addTestToTestSet(folderName,TSN,TestIdentityNumber)
+
+Dim qccon,testSetFolderobj,labFolderobj,TestSetCollection,TestSetObj,TestInstanceObj,SingletstInstance 
+  TestLabRootDirectory = "Root\" & folderName
+  TestSetName =TSN
+  Set qccon = QCUtil.QCConnection
+  Set testSetFolderobj = qccon.TestSetTreeManager 
+  set labfolderobj = testSetFolderobj.NodeByPath(TestLabRootDirectory) 
+  Set TestSetCollection = labfolderobj.FindTestSets(TestSetName)
+  Set TestSetObj= TestSetCollection.Item(1)
+  Set TestInstanceObj = TestSetObj.TSTestFactory 
+  Set SingletstInstance = TestInstanceObj.AddItem(TestIdentityNumber) 
+  SingletstInstance.Post 
+   
+  Set qccon = nothing
+  Set testSetFolderobj = nothing
+  Set labFolderobj = nothing
+  Set TestSetCollection = nothing
+  Set TestSetObj = nothing
+  Set TestInstanceObj = nothing
+  Set SingletstInstance = nothing
+End Sub
+
+Public Function CreateTestSet(TestSetFolderName)
+
+
+mn=MonthName(Month(Now()))
+dd=right("0" & Day(Now()),2)
+yy=Year(Now())
+
+hr =right("0" & Hour(Now()),2)
+mm=right("0" & Minute(Now()),2)
+sec = right("0" & Second(Now()),2)
+
+
+
+TestSetPath = "Root\" & TestSetFolderName
+    Set qcon = qcutil.QCConnection
+    Set NewtestSetFolder = qcon.TestSetTreeManager
+    Set tstSetFolder = NewtestSetFolder.NodeByPath(TestSetPath)
+    Set testSetF = tstSetFolder.TestSetFactory
+    Set testSetAdd = testSetF.AddItem(Null)
+          testSetAdd.Name = mn&"_"&dd&"_"&yy &"_" & hr&mm&sec
+          testSetAdd.Status = "Open"
+          testSetAdd.Post
+          CreateTestSet = testSetAdd.Name
+
+End Function
+
+
+
+Function getTestIdentificationNumber(testname)
+
+Dim qccon,TestFactoryobj,TestCollection, mtest
+
+Set qccon = qcutil.QCConnection
+Set TestFactoryobj = qccon.TestFactory
+Set TestCollection = TestFactoryobj.NewList("")
+
+          For each mtest in TestCollection
+                       If mtest.name = testname Then
+                            getTestIdentificationNumber =mtest.id
+                              Exit for
+                                  Exit Function
+                         End If
+          Next
+
+Set qccon =nothing
+Set TestFactoryobj = nothing
+Set TestCollection = nothing
+
+End Function
+
+
+
+TestSetName =CreateTestSet("DevReview")
+
+CreateATextFile()
+
+GetFilesNameWithoutExt()
+
+'GetTestNamesFromFolder "fso"
+'Exittest
+
+'i = 0
+'Get Test Names for Text File
+TestNameArray = Split(parameter("test_names"), ",")
+'Pass TestnameArray and get an Array of TestIDNumbers
+For i= lbound(TestNameArray) To ubound(TestNameArray)
+   Redim Preserve TestIdentificationNumbers(i)
+  TestIdentificationNumbers(i)=getTestIdentificationNumber(TestNameArray(i))
+Next
+'Pass Array of ID Numbers and update QC TestSet
+For j = lbound(TestIdentificationNumbers) to ubound(TestIdentificationNumbers)
+addTestToTestSet "DevReview",TestSetName,TestIdentificationNumbers(j)
+Next
+
+  
+' TODO: Use this switch to add config option for outlook sending
+If False Then
+	Subject ="Failed Test(s) Assigned To TestSet- " & TestSetName
+	TextBody = "Failed Test(s) have been assigned to TestSet - " & TestSetName
+	aTo = "mgregori@premierits.com"
+	
+	
+	Dim Outlook 'As New Outlook.Application 
+	Set Outlook = CreateObject("Outlook.Application") 
+	
+	Dim Message 'As Outlook.MailItem 
+	Set Message = Outlook.CreateItem(olMailItem) 
+	Message.Subject = Subject 
+	Message.HTMLBody = TextBody 
+	Message.Recipients.Add (aTo) 
+	Const olOriginator = 0 
+	Message.Send 
+	
+	
+	Set Outlook = nothing
+End If
+
+
+'Function GetTestNamesFromTestFile()
+'Dim arrFileLines()
+'i = 0
+'Set objFSO = CreateObject("Scripting.FileSystemObject")
+'Set objFile = objFSO.OpenTextFile("C:\FSO\ScriptLog.txt", 1)
+'Do Until objFile.AtEndOfStream
+'     Redim Preserve arrFileLines(i)
+'     arrFileLines(i) = objFile.ReadLine
+'     i = i + 1
+'Loop
+'objFile.Close
+'GetTestNamesFromTestFile = arrFileLines
+'End Function
+
+
+
+
+Public Sub GetNameOfTestFromTestFactory()
+
+
+  Set qccon = qcutil.QCConnection
+  Set tsf = qccon.TestFactory
+ Set tsflist = tsf.newlist("")
+
+          For each testfile in tsflist
+                   'print "Test File Name: "  & testfile.name  & " Test File Id " & testfile.id
+                   print testfile.name
+          Next
+
+End Sub
+
+
+
+
+Public Sub GetTestNamesFromFolder(folderName)
+Dim arrFiles()
+str_path = "C:\"
+
+Set objFSO = CreateObject("Scripting.FileSystemObject")
+Set objFile =objFSO.OpenTextFile("C:\Fso\Scriptlog.txt",8,true)
+Set objFldr = objFSO.GetFolder(str_path & folderName)
+
+
+Set objFiles = objFldr.Files
+          For each nfile in objFiles
+                   strlength=len(nfile.name)
+                   fn =trim(mid(nfile.name,1,strlength-4))
+                   If nfile.name  =  "ScriptLog.txt" then
+
+                             elseif nfile.name ="UpdateTestSet.vbs" Then
+
+                                      else
+
+                                      arrFiles(0) = fn
+'                            objFile.Writeline(fn)
+'                            objFile.Close
+'                            objFSO.DeleteFile(fn)
+                             End If
+                   
+  
+                   
+                   Next
+
+Set objFSO = nothing
+Set objFile = nothing
+Set objFldr = nothing
+
+End Sub
+
+
+
+
+
+Sub CreateATextFile()
+  Set fso = createobject("Scripting.FileSystemObject")
+  Set fsoFie = fso.CreateTextFile("C:\fso\Scriptlog.txt")
+  Set fsoFile = nothing
+  Set fso = nothing
+End Sub
+
+
+
+Sub GetFilesNameWithoutExt()
+Dim filearray()
+
+f = 0
+Set objfso = CreateObject("Scripting.FileSystemObject")
+Set objFldr = objfso.GetFolder("C:\fso\")
+Set objFiles = objFldr.Files
+Set myfile = objfso.OpenTextFile("C:\fso\Scriptlog.txt",8, true)
+
+                                      For each nfile in objFiles
+                                       strlength=len(nfile.name)
+                                                                   ReDim preserve filearray(f)
+                                                          filearray(f) =trim(mid(nfile.name,1,strlength-4))
+                                                                   f =f+1
+                                                          
+                                      next  
+
+For k = lbound(filearray) to ubound(filearray)
+
+If filearray(k) = "Scriptlog" or filearray(k) = "UpdateTestSet" then
+                   else
+                             myfile.WriteLine(filearray(k))
+                             objfso.DeleteFile("C:\fso\" & filearray(k) & ".txt")
+end If
+
+Next
+
+Set objfso = nothing
+Set objFldr= nothing
+Set objFiles = nothing
+Set myfile = nothing
+
+End Sub
+
+
+
+
+
+
+'
+'Sub SendMailOutlook(TestSetName) 
+'
+'
+'aTo = "Mark.Gregori@edd.ca.gov"
+'Subject = "TestSet Development"
+'TextBody =" The following TestSet " & TestSetName & " in Quality Center contains test that failed Validations and maybe a defect, please rerun and review the output"
+'aFrom = "Robert.Harding@edd.ca.gov"
+'
+'Dim Outlook 'As New Outlook.Application 
+'Set Outlook = CreateObject("Outlook.Application") 
+'
+'Dim Message 'As Outlook.MailItem 
+'Set Message = Outlook.CreateItem(olMailItem) 
+'With Message 
+'.Subject = Subject 
+'.HTMLBody = TextBody 
+'.Recipients.Add (aTo) 
+'Const olOriginator = 0 
+'.Send 
+'End With 
+'
+'End Sub

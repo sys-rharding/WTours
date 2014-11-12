@@ -1,0 +1,172 @@
+'---------------------------------------------------------------------------------------------------------------------------------
+' Premier IT Solutions 2011,2012  Enterprise
+' Copyright symbol Premier IT Solutions, All rights reserved.
+
+' Warning: This software is protected by copyright law and international treaties.
+' Unauthorized reproduction or distribution of this program or any portion of it, may result
+' in severe civil and criminal penalties, and will be prosecuted to the maximum extent
+' possible under law. Express written approval for any use is required from Premier IT Solutions.
+'---------------------------------------------------------------------------------------------------------------------------------
+
+Function writeTableToText
+Set obj = Browser("Welcome: Mercury Tours").Page("Flight Confirmation: Mercury").WebElement("No_of_Passengers")
+b =obj.GetROProperty("outerhtml")
+print b
+	set table = Browser("Welcome: Mercury Tours").Page("Welcome: Mercury Tours").WebTable("Flight_Price_Info_Table")
+	Environment("Peportpath")="C:\Result3.xls"
+	a=table.GetROProperty("outerhtml")
+	print a
+	Set FSO = CreateObject("Scripting.FileSystemObject")
+	Set WriteFile = FSO.CreateTextFile(Environment("Peportpath"), True)
+		writeFile.writeLine(a)
+writeFile.close
+End Function
+
+Function getTableContent(DTPath, Table_Object)
+			   datatable.AddSheet("Table_Extracted")
+					col = Table_Object.ColumnCount(1)
+					row = Table_Object.RowCount
+					set mySheet = datatable.GetSheet("Table_Extracted")
+			  For i = 1 to col
+					    'datatable.GlobalSheet.AddParameter "Titel  "&i, ""
+						datatable.GetSheet("Table_Extracted").AddParameter "Titel"&i, ""						'datatable.mySheet.AddParameter "Titel  "&i, ""
+						'msgbox datatable.GetSheet("Table_Extracted").GetParameter(i).Name
+              Next
+			  For i = 1 to row
+					For j = 1 to col
+								mySheet.SetCurrentRow(i)
+                                datatable.Value(datatable.GetSheet("Table_Extracted").GetParameter(j).Name,"Table_Extracted") = Table_Object.GetCellData(i,j)
+							 'datatable.mySheet.GetParameter(j).Name) = Table_Object.GetCellData(i,j)
+					Next
+			  Next
+                  'msgbox row
+End Function
+
+
+Function checkTable(DTPath, Table_Object, TableSheet, cnt)
+            Table_Expected=  "Table_Expected"&cnt
+			Table_Report = 	"Table_Report"&cnt
+			Table_Differences=  "Table_Differences"&cnt
+			Table_Actuals=	 "Table_Actuals"&cnt
+
+				datatable.AddSheet(Table_Expected)
+				datatable.AddSheet(Table_Report)
+				datatable.AddSheet(Table_Differences)
+                datatable.AddSheet(Table_Actuals)
+				'import one Table and duplicate it into foud sheet. At the begning all sheets have the same value
+				'______________________________________________________________________
+				datatable.ImportSheet DTPath, TableSheet, Table_Expected 
+'                '______________________________________________________________________
+				datatable.ImportSheet DTPath, TableSheet, Table_Report
+				  '______________________________________________________________________
+				datatable.ImportSheet DTPath, TableSheet, Table_Differences
+				datatable.ImportSheet DTPath, TableSheet, Table_Actuals
+'				  '______________________________________________________________________
+'				'msgbox "done  "&i
+						'i = i+1
+                  'datatable.importsheet DTPath, Table, "Table_Report"
+				  'datatable.importsheet DTPath,  table_title, "Headers"
+			      'set myHeaderSheet = datatable.GetSheet("Headers")
+				  ''________________________________________________________________________
+				  set  expectedSheet =  datatable.GetSheet(Table_Expected)
+'				   ''________________________________________________________________________
+				   set reportSheet = datatable.GetSheet(Table_Report)
+				  ''________________________________________________________________________
+				   set DifferencesSheet = datatable.GetSheet(Table_Differences)
+				   set  actualTableSheet = datatable.GetSheet(Table_Actuals)
+                 	  ''________________________________________________________________________
+					'h_row = datatable.GetSheet("Headers").GetRowCount() ' Return the number of rows in that datatable
+					'_________________________________________________________________
+	 			 	 t_row = datatable.GetSheet(Table_Expected).GetRowCount
+						'_________________________________________________________________
+					'msgbox t_row
+					 reportSheet.AddParameter "Status", ""
+        			'Browser("Welcome: Mercury Tours").Page("Welcome: Mercury Tours").Sync
+
+					'msgbox t_row
+							For l = 1 to t_row
+								rowStatus = true
+									 expectedSheet.SetCurrentRow(l)
+									 'msgbox expectedSheet.GetParameterCount
+								For j = 1 to expectedSheet.GetParameterCount
+									text_found = Table_Object.GetCellData(l, j)
+									expectedVal = datatable.Value(expectedSheet.GetParameter(j).Name, Table_Expected)
+									'msgbox expected&"  "&text_found
+                                      If (text_found =  expectedVal )Then
+										 ' print text_found&"   "&"Found "
+                                          DifferencesSheet.SetCurrentRow(l)
+										  datatable.Value(DifferencesSheet.GetParameter(j).Name, Table_Differences) =  "" 'if not found delete it
+									  else
+		  										 'print datatable.Value(reportSheet.GetParameter(j).Name, Table_Report)&"  "&"not found"&"  found   "&text_found
+												 'found =  "x "&text_found
+												 rowStatus = false
+												 reportSheet.SetCurrentRow(l)
+												 datatable.Value(reportSheet.GetParameter(j).Name, Table_Report) =  "x "& text_found 'if not found replace the cell value with character x and text found
+												 '____________________________________________________________________
+'												  DifferencesSheet.SetCurrentRow(l)
+												 datatable.Value(DifferencesSheet.GetParameter(j).Name, Table_Differences) =  text_found
+												 actualTableSheet.SetCurrentRow(l)
+												 datatable.Value(expectedSheet.GetParameter(j).Name, Table_Actuals) =  text_found 'if not found replace the cell value with text found
+												 '_____________________________________________________________________________
+
+                                     end if
+								 Next
+								 If  rowStatus Then
+									  reportSheet.SetCurrentRow(l)
+									  datatable.Value("Status",  Table_Report) = "Passed"
+								 Else
+   									   reportSheet.SetCurrentRow(l)
+   									  datatable.Value("Status",  Table_Report) =  "Failed"
+								 End If
+								
+                            Next
+							
+		End Function 
+
+Function TableValidate( tblC, ScrDrv, ObjectName, dataValue, CurRow)
+     'msgbox "Function "& tblC
+			   '	If(dataValue  <>"TBLEND") Then
+                      datatable.SetCurrentRow(CurRow)
+					  tblC=ScrDrv.GetRowWithCellText(ObjectName)
+                     If  tblC > 0 Then
+                			'If  instr(ScrDrv.GetCellData(tblC,1),  ObjectName)Then
+							  Reporter.ReportEvent micDone,  ObjectName, "Found"
+							 print ScrDrv.GetCellData(ScrDrv.GetRowWithCellText(ObjectName), 2)
+					'If  (ScrDrv.GetCellData(tblC,2)= dataValue) Then
+							If ScrDrv.GetCellData(tblC, 2)= dataValue Then
+							   Reporter.ReportEvent micDone, ObjectName, "Item and Price Found"
+                            'msgbox ScrDrv.GetCellData(tblC,2)&"  "&dataValue
+						   'msgbox ScrDrv.GetCellData(i,2)&"and  "&dataValue&"   are the same    "
+							Else
+								   Reporter.ReportEvent micFail, ObjectName, "Value @Row No:  "&CurRow& "   Not  Found ,  Found Value Is :  "&ScrDrv.GetCellData(tblC,2)
+								   datatable.Value("Found",  "Global") = ScrDrv.GetCellData(tblC,2)
+						  'msgbox ScrDrv.GetCellData(tblC, 2)&"  "&dataValue
+							'print ScrDrv.GetCellData(tblC,2)&"  "&dataValue
+						   'Reporter.ReportEvent micFail, datatable.Value("Item"), datatable.Value("Item")&"   Value   "&datatable.Value("Price") &"    not Found, found value is     "&ScrDrv.GetCellData(i,2)
+						  End If
+			   Else
+			          ScrDrv.CaptureBitmap "CapturedScreen.bmp", 1
+					  Reporter.ReportEvent micFail, "Item:  "&ObjectName, "@Row No:  "&CurRow& "   Not  Found  ", "CapturedScreen.bmp"
+                       'Reporter.ReportEvent micDone, pageName, "Screenshot", "CapturedScreen.bmp"
+					  'datatable.Value("FoundTBLElements",  "Global") = ScrDrv.GetCellData(tblC,1)
+					  datatable.Value("FoundTBLElements",  "Global") = ObjectName&"   "&"Not Found"
+					 'print "Item    "&datatable.Value("Item")&"     not Found, Found Item is     "&ScrDrv.GetCellData(i,1)
+			End If
+    'End If
+End Function
+
+
+'Function CloseBrowser 'close all open browsers except Quality center
+'Dim oDesc, x
+''Create a description object
+'Set oDesc = Description.Create
+'oDesc( "micclass" ).Value = "Browser"
+' 'Close all browsers except Quality Center
+'If Desktop.ChildObjects(oDesc).Count > 0 Then
+'    For x = Desktop.ChildObjects(oDesc).Count - 1 To 0 Step -1
+'       If InStr(1, Browser("creationtime:="&x).GetROProperty("name"), "Quality Center") = 0 Then  
+'          Browser( "creationtime:=" & x ).Close
+'       End If
+'    Next
+'End If
+'End Function
